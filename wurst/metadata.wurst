@@ -1,0 +1,26 @@
+package metadata
+
+import HashMap
+
+
+public class MetaData<T>
+    private HashMap<unit, T> unitToMetaData
+    string name
+
+    construct(string name)
+        this.unitToMetaData = new HashMap<unit, T>
+        this.name = name
+
+    function set(unit u,T data)
+        this.unitToMetaData.put(u, data)
+
+    function get(unit u) returns T
+        return this.unitToMetaData.get(u)
+
+    function has(unit u) returns bool
+        return this.unitToMetaData.has(u)
+
+    function name() returns string
+        return this.name
+
+

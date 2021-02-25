@@ -1,0 +1,23 @@
+package main
+
+import lunara
+import autoIncrement
+
+init
+    initIncrement()
+    genLunara()
+    .getInstance()
+    ..setStr(0)
+    ..setAgi(0)
+    ..setInt(0)
+    ..setMaxHP(1352)
+    ..setHP(1352)
+    ..setMaxMana(500)
+    ..setMana(500)
+    ..setAttackCooldownPercChange(1.11, 0)
+    ..setArmor(0)
+    ..addIncrement(2.815, "HP")
+    ..addIncrement(3, "MP")
+    ..setBaseDamage(94, 0)
+    
+    

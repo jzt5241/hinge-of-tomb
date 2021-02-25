@@ -1,0 +1,71 @@
+package autoIncrement
+import HashMap
+import LinkedList
+import ClosureTimers
+import ClosureEvents
+import public metadata
+
+constant HEAL_FOR_EVERY_THIS_TIME = 0.2
+constant MANAREGEN_FOR_EVERY_THIS_TIME = 0.2
+var aimToDualtimeMap = new HashMap<string, real>()
+
+
+public function initIncrement()
+    aimToDualtimeMap.put("HP", HEAL_FOR_EVERY_THIS_TIME)
+    aimToDualtimeMap.put("MP", MANAREGEN_FOR_EVERY_THIS_TIME)
+
+public class AutoIncrement
+    private MetaData<real> value
+    private LinkedList<unit> targetList
+    private real dualtime
+
+    construct(unit u, real value, string aim)
+        this.targetList = new LinkedList<unit>
+        this.dualtime = aimToDualtimeMap.get(aim)
+        this.value = new MetaData<real>(aim)..set(u, value * this.dualtime)
+        
+        this.autoIncrement(u)
+        
+    
+    private function autoIncrement(unit u)
+        doPeriodically(this.dualtime) (_) ->
+            for un in this.targetList
+                un.addMetaData<real>(this.value, this.targetList)
+        this.binding(u)
+    
+    private function binding(unit u)
+        switch (this.value.name)
+            case "HP"
+                EventListener.add(EVENT_UNIT_DAMAGED) ->
+                    let un = BlzGetEventDamageTarget()
+                    if not this.targetList.has(un)
+                        this.targetList.add(un)
+            case "MP"
+                EventListener.onCast(u) (_) ->
+                    if not this.targetList.has(u)
+                        this.targetList.add(u)
+                
+            default
+                print(this.value.name)
+
+    
+        
+
+function unit.addMetaData(MetaData<real> value, LinkedList<unit> us)
+    switch value.name()
+        case "HP"
+            this.addHP(value.get(this))
+            if this.getHP() == this.getMaxHP()
+                us.remove(this)
+        case "MP"
+            this.addMana(value.get(this))
+            if this.getMana() == this.getMaxMana()
+                us.remove(this)
+        default
+            print("bug!!!!")
+
+
+
+
+public function unit.addIncrement(real value, string aim) returns AutoIncrement
+    return new AutoIncrement(this, value, aim)

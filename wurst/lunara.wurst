@@ -1,0 +1,33 @@
+package lunara
+
+import Assets
+import ObjectIdGenerator
+import UnitObjEditing
+import UnitIds
+
+let UNIT_ID_OF_LUNARA = compiletime(HERO_ID_GEN.next())
+@compiletime public function genLunara() returns Lunara
+    let instance = new Lunara(new HeroDefinition(UNIT_ID_OF_LUNARA, UnitIds.priestessofthemoon))
+    instance.getHeroDefinition()
+    ..setModelFile(Units.dryad1)
+    ..setIconGameInterface(Icons.bTNDryad)
+    ..setName("露娜拉")
+    ..setProperNames("塞纳留斯的长女")
+    ..setAttack1Range(550)
+    ..setSpeedBase(440)
+    ..setAttack1ProjectileArt(Abilities.dryadmissile)
+    
+    return instance
+class Lunara
+    construct(HeroDefinition hd)
+        this.hd = hd
+        this.instance = CreateUnit(players[0], UNIT_ID_OF_LUNARA, 0, 0, 0)
+    
+    private HeroDefinition hd
+    private unit instance
+
+    function getHeroDefinition() returns HeroDefinition
+        return this.hd
+
+    function getInstance() returns unit
+        return this.instance

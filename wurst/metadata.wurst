@@ -1,15 +1,21 @@
 package metadata
 
 import HashMap
+//可以通过meta的data的名字查找metadata的实例
+public var nameToRealMetaMap = new HashMap<string, MetaData<real>>
 
+//为了方便使用提供绑定metadata的方法
+public function registerMetaData(MetaData<real> data)
+    nameToRealMetaMap.put(data.name, data)
 
+//很简单的元数据，每个单位同一个名字的metadata只会有一个
 public class MetaData<T>
     private HashMap<unit, T> unitToMetaData
     string name
 
     construct(string name)
         this.unitToMetaData = new HashMap<unit, T>
-        this.name = name
+        this.name = name + "_META"
 
     function set(unit u,T data)
         this.unitToMetaData.put(u, data)

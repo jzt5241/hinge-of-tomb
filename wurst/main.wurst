@@ -16,8 +16,12 @@ init
     ..setMana(500)
     ..setAttackCooldownPercChange(1.11, 0)
     ..setArmor(0)
-    ..addIncrement(2.815, "HP")
-    ..addIncrement(3, "MP")
+    ..addIncrement(2.815, true, "HP", "", false)
+    ..addIncrement(3, true, "MP", "", false)
     ..setBaseDamage(94, 0)
-    
+    ..addIncrement(.04, false, "HP", "LEVELUP", true)
+    ..addIncrement(.04, false, "MP", "LEVELUP", true)
+    ..addIncrement(.04, false, "BasicDamage", "LEVELUP", true)
+    ..addIncrement(.04, false, "HPRegen", "LEVELUP", true)
+    CreateItem('tkno', 0, 0)
     

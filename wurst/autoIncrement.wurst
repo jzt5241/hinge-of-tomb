@@ -1,40 +1,76 @@
 package autoIncrement
+
 import HashMap
 import LinkedList
 import ClosureTimers
 import ClosureEvents
 import public metadata
-
+//事件预注册
+class Events
+    private eventid array[10] events
+    construct()
+        events[0] = EVENT_UNIT_DAMAGED
+        events[1] = EVENT_UNIT_ATTACKED
+        events[2] = EVENT_PLAYER_HERO_LEVEL
+        events[3] = EVENT_UNIT_DEATH
+        events[4] = EVENT_UNIT_HERO_REVIVE_FINISH
+        events[5] = EVENT_UNIT_HERO_REVIVE_START
+        events[6] = EVENT_UNIT_CONSTRUCT_FINISH
+        events[7] = EVENT_UNIT_CONSTRUCT_CANCEL
+        events[8] = EVENT_UNIT_SPELL_EFFECT
+        events[9] = EVENT_UNIT_SPELL_FINISH
+    //之所以这么麻烦是eventid是handle类型是来自操作系统的数据类型不能直接存数据结构
+    function get(int index) returns eventid
+        return events[index]
+    function length() returns int
+        return this.events.length
+//几个常数，名字就是作用
 constant HEAL_FOR_EVERY_THIS_TIME = 0.2
 constant MANAREGEN_FOR_EVERY_THIS_TIME = 0.2
+
+//通过不同的作用目标（即元数据的名字）来查找间隔时间，主要是为了实现间隔时间的多态
 var aimToDualtimeMap = new HashMap<string, real>()
+//通过不同的作用目标（即元数据的名字）来查找时间id，为了实现绑定事件的多态
+var aimToEventMap = new HashMap<string, int>()
 
 
+//为了让两种增加可以以相同的方式返回
+public interface Increment
+    function binding(unit u)
+//初始化必要的常量和查找Map
 public function initIncrement()
     aimToDualtimeMap.put("HP", HEAL_FOR_EVERY_THIS_TIME)
     aimToDualtimeMap.put("MP", MANAREGEN_FOR_EVERY_THIS_TIME)
+    aimToEventMap.put("LEVELUP", 2)
+    
+                    
 
-public class AutoIncrement
+//自动版（可以理解为unity的update函数），即反复执行，由于这个有性能问题所以要动态管理需要使用该功能的单位              
+public class AutoIncrement implements Increment
+    //大部分都是实数的，少部分整数的转一下类型就好
     private MetaData<real> value
+    //需要使用该功能的所有单位
     private LinkedList<unit> targetList
+    //该功能的间隔时间
     private real dualtime
-
+    //初始化对应的成员，并且设置元数据的名称和值
     construct(unit u, real value, string aim)
         this.targetList = new LinkedList<unit>
         this.dualtime = aimToDualtimeMap.get(aim)
-        this.value = new MetaData<real>(aim)..set(u, value * this.dualtime)
-        
+        this.value = new MetaData<real>(aim+"Regen")..set(u, value)
+        registerMetaData(this.value)
         this.autoIncrement(u)
         
-    
+    //启动循环计时器来实现自动增加
     private function autoIncrement(unit u)
         doPeriodically(this.dualtime) (_) ->
             for un in this.targetList
-                un.addMetaData<real>(this.value, this.targetList)
+                un.addMetaData<real>(this.value, this.targetList, dualtime)
         this.binding(u)
-    
-    private function binding(unit u)
-        switch (this.value.name)
+    //绑定功能开关
+    override private function binding(unit u)
+        //元数据的名称是XX_META, 而自增型的是XXRegen_META,但是真正有效的就只是XX的部分
+        switch (this.value.name.substring(0, this.value.name.length()-10))
             case "HP"
                 EventListener.add(EVENT_UNIT_DAMAGED) ->
                     let un = BlzGetEventDamageTarget()
@@ -47,12 +83,35 @@ public class AutoIncrement
                 
             default
                 print(this.value.name)
-
-    
+//绑定于事件的增加
+public class TriggerIncrement implements Increment
+    //绑定的事件
+    private eventid bindingEvent
+    private MetaData<real> value
+    //是否按照百分比增加，自增型的百分比增加更复杂所以下一次提交再更新
+    private bool isPer
+    //与自增型的类似
+    construct(unit u, real value, string aim, string eventName, bool isPer)
+        this.isPer =isPer
+        this.bindingEvent = new Events().get(aimToEventMap.get(eventName))
+        this.value = new MetaData<real>(aim)..set(u, value)
+        this.binding(u)
         
-
+    //绑定事件，PS：由于之后会有涉及伤害事件的特殊情况（即伤害事件需要判断暴击减伤，格挡，反弹，反射等），所以绑定于伤害事件的将在以后的提交中大幅度更新
+    override function binding(unit u)
+        if this.bindingEvent == EVENT_UNIT_DAMAGED or this.bindingEvent == EVENT_PLAYER_HERO_LEVEL or this.bindingEvent == EVENT_UNIT_DEATH
+            EventListener.add(this.bindingEvent) ->
+                if GetTriggerUnit() == u
+                    u.addMetaData(this.value, this.isPer)
+                else
+                    print(unitToIndex(u).toString() + " " + unitToIndex(GetTriggerUnit()).toString())
+        else
+            EventListener.add(u, this.bindingEvent) ->
+                if GetTriggerUnit() == u
+                    u.addMetaData(this.value, this.isPer)
+//自增型默认的注册增长效果的方式
 function unit.addMetaData(MetaData<real> value, LinkedList<unit> us)
-    switch value.name()
+    switch (value.name.substring(0, value.name.length()-10))
         case "HP"
             this.addHP(value.get(this))
             if this.getHP() == this.getMaxHP()
@@ -63,9 +122,51 @@ function unit.addMetaData(MetaData<real> value, LinkedList<unit> us)
                 us.remove(this)
         default
             print("bug!!!!")
-
-
-
-
-public function unit.addIncrement(real value, string aim) returns AutoIncrement
-    return new AutoIncrement(this, value, aim)
+//自定义间隔的自增型注册增长效果
+function unit.addMetaData(MetaData<real> value, LinkedList<unit> us, real dualtime)
+    switch (value.name.substring(0, value.name.length()-10))
+        case "HP"
+            this.addHP(value.get(this) * dualtime)
+            if this.getHP() == this.getMaxHP()
+                us.remove(this)
+        case "MP"
+            this.addMana(value.get(this) * dualtime)
+            if this.getMana() == this.getMaxMana()
+                us.remove(this)
+        default
+            print("bug!!!!")
+//获取元数据，一般用于需要增长的数据是元数据的情况
+function unit.getMetaData(string name) returns MetaData<real>
+    return nameToRealMetaMap.get(name)
+//判断是否拥有（没有Option用我要死了），不判空会抛异常哦
+function unit.hasMetaData(string name) returns bool
+    return nameToRealMetaMap.has(name)
+//非自增型的注册增长方式
+function unit.addMetaData(MetaData<real> value, bool isPer)
+    switch (value.name.substring(0, value.name.length()-5))
+        case "HP"
+            let increment = isPer? this.getMaxHP() * value.get(this) : this.getMaxHP() + value.get(this)
+            this.setMaxHP((this.getMaxHP() + increment).toInt())
+            this.setHP(this.getHP() + increment)
+        case "MP"
+            let increment = isPer? this.getMaxMana() * value.get(this) : this.getMaxMana() + value.get(this)
+            this.setMaxMana((this.getMaxMana() + increment).toInt())
+            this.setMana(this.getMana() + increment)
+        case "BasicDamage"
+            if isPer
+                this.setBaseDamage((this.getBaseDamage(0) * (1 + value.get(this))).toInt(), 0)
+            else
+                this.setBaseDamage((this.getBaseDamage(0) + value.get(this)).toInt(), 0)
+        default
+            if this.hasMetaData(value.name())
+                let data = isPer? this.getMetaData(value.name()).get(this) * (1 + value.get(this)) : this.getMetaData(value.name()).get(this) + value.get(this)
+                this.getMetaData(value.name()).set(this, data)
+                print(this.getMetaData(value.name()).get(this))
+            else
+                print("try to change metadata that not binding yet: name called " + value.name)
+            
+//封装整个功能只为使用者提供这么一个入口
+public function unit.addIncrement(real value, bool isAuto, string aim, string eventName, bool isPer) returns Increment
+    if isAuto
+        return new AutoIncrement(this, value, aim)
+    return new TriggerIncrement(this, value, aim, eventName, isPer)

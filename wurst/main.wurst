@@ -20,8 +20,9 @@ init
     ..addIncrement(3, true, "MP", "", false)
     ..setBaseDamage(94, 0)
     ..addIncrement(.04, false, "HP", "LEVELUP", true)
-    ..addIncrement(.04, false, "MP", "LEVELUP", true)
+    ..addIncrement(10, false, "MP", "LEVELUP", false)
     ..addIncrement(.04, false, "BasicDamage", "LEVELUP", true)
     ..addIncrement(.04, false, "HPRegen", "LEVELUP", true)
+    ..addIncrement(.098, false, "MPRegen", "LEVELUP", false)
     CreateItem('tkno', 0, 0)
     

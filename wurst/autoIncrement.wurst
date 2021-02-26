@@ -145,11 +145,11 @@ function unit.hasMetaData(string name) returns bool
 function unit.addMetaData(MetaData<real> value, bool isPer)
     switch (value.name.substring(0, value.name.length()-5))
         case "HP"
-            let increment = isPer? this.getMaxHP() * value.get(this) : this.getMaxHP() + value.get(this)
+            let increment = isPer? this.getMaxHP() * value.get(this) : value.get(this)
             this.setMaxHP((this.getMaxHP() + increment).toInt())
             this.setHP(this.getHP() + increment)
         case "MP"
-            let increment = isPer? this.getMaxMana() * value.get(this) : this.getMaxMana() + value.get(this)
+            let increment = isPer? this.getMaxMana() * value.get(this) : value.get(this)
             this.setMaxMana((this.getMaxMana() + increment).toInt())
             this.setMana(this.getMana() + increment)
         case "BasicDamage"
